@@ -29,8 +29,8 @@ _start:
 	mov ecx, first
 	mov edx, f_len
 	int 0x80 ; Int 0x80 Means system interrupt to swap to kernel space and allow kernel to use system calls
-		; EAX Holds Syscall Number 1=STDOUT
-		; EBX Holds File Descriptor Numbers
+		; EAX Holds Syscall Number 4=SYS_WRITE
+		; EBX Holds File Descriptor Number, 1 = STDIN
 		; ECX Holds Pointer to string to Print
 		; EDX Holds Number Of bytes To write, we get the Amount From the f_len equ $ -first
 
@@ -80,21 +80,26 @@ _start:
 		; Ascii Code for '2' Is 50
 		; Subtract 48 From 50 Which Gives Us 2, Easy way to convert single digits
 
+	; Call Convert Numbers Function Then Return Back to Line Afterwards
 	call convert_nums
 
+	; If bh = 1 Jump To Addition
 	cmp bh, 1
 	je addition
 
+	; If bh = 2 Jump To Subtraction
 	cmp bh, 2
 	je subtraction
 
+	; If bh = 3 Jump To Multipication
 	cmp bh, 3
 	je multplication
 
+	; If bh = 4 Jump To Division
 	cmp bh, 4
 	je division
 
-
+	; TODO Add Check For If Number >4 If so jump Back to Operator Input
 	
 
 
@@ -102,46 +107,65 @@ _start:
 
 
 
-convert_nums:
+convert_nums:	
+	; Move num1 and num2 into al and bl Registers
 	mov al, [num1]
 	mov bl, [num2]
 
+	; Subtract 48-n Where N = inputted Numbers to turn it into numeric
 	sub al, '0'
 	sub bl, '0'
 
+	; Move back into memory After conversion For Later, I think This Is Useless Tho as im using al and bl for the addtion anyway
 	mov [num1], al
 	mov [num2], bl
 
+	; Return Back To cmp operation
 	ret
 
 addition:
+	; Add Inputted Num1 and Num2, sum gets saved into AL
 	add al, bl
 
+	; Convert Sum From Numeric to Ascii For Printing
 	add al, '0'
+	; Save Sum Back into SUM location
 	mov [sum], al
 
+	; Jump To Print Sum
 	jmp print_sum
 
 
 subtraction:
+	; Sub num1 From Num2, Sum Gets Saved Into AL
 	sub al, bl
+
+	; Convert Sum Back Into ASCII
 	add al, '0'
+	; Save SUM into sum memory location
 	mov [sum], al
 
 	jmp print_sum;
 
 multplication:
+	; Multiply al * bl, SUM gets Saved into 16 bit registers AX
 	mul bl
 
+	; Comvert SUM into ASCII
 	add ax, '0'
 
+	; Save To SUM location
 	mov [sum], ax
 
 	jmp print_sum
 
 division:
+	; Divide al / bl, Sum Gets Saved Into AX
 	div bl
+
+	; Convert To ASCII
 	add ax, '0'
+	; Save To SUM location
 	mov [sum], ax
 
 	jmp print_sum
@@ -150,6 +174,7 @@ division:
 
 
 print_sum:
+	; Use SYS_WRITE To Print Out SUM
 	mov eax, 4
 	mov ebx, 1
 	mov ecx, sum
@@ -161,6 +186,7 @@ print_sum:
 
 
 exit:
+	; Use SYS_EXIT to exit Program
 	mov eax, 1
-	xor ebx, ebx
+	xor ebx, ebx ;  Clear EBX registers to 0, Just Like in C, 0 = Exiited With No Problems
 	int 0x80
