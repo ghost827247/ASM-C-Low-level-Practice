@@ -78,7 +78,7 @@ _start:
 	sub bh, '0' 
 		; Lets Say User entered Number 2 For addtion, Ascii Code for '0' Is 48
 		; Ascii Code for '2' Is 50
-		; Subtract 48 From 50 Which Gives Us 2, Easy way to convert single digits
+		; Subtract 50 From 48 Which Gives Us 2, Easy way to convert single digits
 
 	; Call Convert Numbers Function Then Return Back to Line Afterwards
 	call convert_nums
