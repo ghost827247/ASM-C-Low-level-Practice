@@ -84,7 +84,7 @@ int main(int argc, const char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Got a Connection From %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+	printf("Got a Connection From %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port)); // Convert Network Byte IP/Port to ascii and Int for printing
 
 
 	while(1) {
