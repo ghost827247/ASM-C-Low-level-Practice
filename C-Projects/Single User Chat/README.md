@@ -9,3 +9,6 @@ Compile with
     ./server <port>
     ./client <same port as server>
 
+These are the resources i mainly looked at when learning (im still dogshit tho)
+    https://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html
+    pubs.opengroup.org/onlinepubs/ --> For Functions like read, write ect
