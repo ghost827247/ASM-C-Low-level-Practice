@@ -1,0 +1,103 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+// int get_save()
+int get_save(FILE *file, const char* filename, int client_fd) { // Function To Save The File We Want
+	
+	ssize_t bytes_read;
+	char network_buffer[1024];
+
+	bytes_read = recv(client_fd, network_buffer, sizeof(network_buffer), 0); // Read Message From File, incase its the "doesnt exist message"
+    if (bytes_read <= 0) { 
+        // Error or connection closed by client
+        return -1;
+    }
+
+    else if (strcmp(network_buffer, "File Doesnt Exist!") == 0) { // Compare message From Server To Check If File Existed
+		printf("[!] File Doesnt Exist");
+		return 1;
+	}
+
+	file = fopen("file.txt", "w"); // Open File In Write Mode
+	if (file == NULL) {
+		perror("Failed Opening File");
+		
+	}
+
+	fprintf(file, "%s\n", network_buffer); // Write To File InCase It was a correct File
+
+
+	while(1) {
+		bytes_read = recv(client_fd, network_buffer, sizeof(network_buffer), 0);
+
+		if (bytes_read <= 0) {
+			break;
+		}
+
+		fprintf(file, "%s\n", network_buffer);
+	}
+	fclose(file);
+	return 0;
+}
+
+// int put_send()
+
+void error(const char* msg) {
+	perror(msg);
+	exit(EXIT_FAILURE);
+}
+
+int main(int argc, char const *argv[])
+{
+	int client_fd, status;
+	struct sockaddr_in address;
+	int portno = atoi(argv[1]);
+	char command[200] = { 0 };
+	char filename[50] = { 0 };
+	char usage[2048];
+	FILE *file;
+
+	if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		error("Failed Creating Socket");
+	}
+
+	address.sin_family = AF_INET;
+	address.sin_port = htons(portno);
+
+	if ((inet_pton(AF_INET, "192.168.1.30", &address.sin_addr)) <= 0) {
+		error("Failed Conveting IP");
+	}
+
+	if ((status = connect(client_fd, (struct sockaddr*)&address, sizeof(address))) < 0) {
+		error("Failed Connecting To Server!");
+	}
+
+	ssize_t bytes_recv = recv(client_fd, usage, sizeof(usage), 0);
+	usage[bytes_recv] = '\0';
+	printf("%s\n", usage);
+	printf("=============================\n");
+	
+
+	printf("$> ");
+	fgets(command, sizeof(command), stdin);
+	if (strncmp(command, "get ", 4) == 0) {
+		printf("You Want Get\n");
+		strcpy(filename, command + 4);
+		filename[strcspn(command, "\n")] = '\0'; // Null Terminate Filename
+		printf("%s", filename);
+		send(client_fd, command, strlen(command), 0);
+		if ((get_save(file, filename, client_fd)) == 0) {
+			printf("[*] Succesfully saved File");
+		}
+	}
+	
+	close(client_fd);
+
+	return 0;
+}
