@@ -63,7 +63,8 @@ int main(int argc, char const *argv[]) {
 	char network_buffer[BUFFER_SIZE] = { 0 }; // Buffer For Data Coming From network
 	char file_name_buffer[BUFFER_SIZE] = { 0 }; // Buffer To Hold the File Name
 
-	char usage[2028] = "[*] Usage: get <filename>";
+	char usage[2028] = "[*] Usage: get <filename>\n[*] Usage: put <filename>"; // Usage String To Send To Client the Moment they connect
+	printf("[*] Started listening...\n");
 	
 	
 
@@ -74,6 +75,7 @@ int main(int argc, char const *argv[]) {
 	if ((setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) < 0) { // Set socket to be reuseable
 		error("Failed Set Sock Opt");
 	}
+	
 
 	serv_addr.sin_family = AF_INET; // Set Internet Domain To IPv4
 	serv_addr.sin_port = htons(portno); // Convert Port Number to network Byte Order
@@ -83,7 +85,10 @@ int main(int argc, char const *argv[]) {
 		error("Failed Binding Socket");
 	}
 
-	listen(server_fd, 0); // Listen For Connection With Back Log Of 0
+	
+	listen(server_fd, SOMAXCONN); // Listen For Connection With Back Log Of 0
+
+
  
 	if ((client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len)) < 0) { // Accept User Connection and Save File Descriptor Number Into Client_fd
 		error("Failed Accepting Client!");
@@ -102,7 +107,7 @@ int main(int argc, char const *argv[]) {
 		if (strncmp(network_buffer, "get ", 4) == 0) { // Check If User Sent "get"
 			strcpy(file_name_buffer, network_buffer + 4); // Copy Filename From User Into differnt Buffer, buffer + 4 = anything after "get "
 			file_name_buffer[strcspn(file_name_buffer, "\n")] = '\0'; // Null Terminate Filename
-			printf("[*] User Wants: %s\n", file_name_buffer); // Print What File User Wants
+			printf("[*] User Wants To Download: %s\n", file_name_buffer); // Print What File User Wants
 			if ((open_send(file, client_fd, file_name_buffer)) == 0) { // Jump To Open and Send Function
 				printf("[*] File Sent Succesfully\n"); // If the Function Returns 0 it succeded
 			} 
@@ -111,9 +116,9 @@ int main(int argc, char const *argv[]) {
 		else if (strncmp(network_buffer, "put ", 4) == 0) { // Check If User Entered "put"
 			strcpy(file_name_buffer, network_buffer + 4); // Copy File Name
 			file_name_buffer[strcspn(file_name_buffer, "\n")] = '\0'; // Null terminate
-			printf("[*] User Wants: %s\n", file_name_buffer);
+			printf("[*] User Wants To Send: %s\n", file_name_buffer);
 			if ((open_save(file, client_fd, file_name_buffer)) == 0) { // Jump To Open And Save Function
-				printf("File Saved Succesfully");
+				printf("[*] File Saved Succesfully");
 			}
 
 		}
