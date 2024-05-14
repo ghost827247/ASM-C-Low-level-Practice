@@ -3,6 +3,8 @@
 #include <curl/curl.h>
 #include <time.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
@@ -13,16 +15,18 @@
 #define ANSI_COLOR_RESET   "\x1b[0m"
 #define ANSI_COLOR_BOLD    "\033[1m"
 
+struct ThreadArgs { // Struct For values to pass to function For Threading
+    FILE* file;
+    char* baseurl;
+};
+
 int count_words(FILE *file, char *result) { // Function To Count the amount of lines in the text file
 	int i = 1;
 	char line[60];
-
-
 	while ((result = fgets(line, sizeof(line), file)) != NULL) {
 		i++; // While Line != EMPTY we update the line count
 	}
-	rewind(file); // After Its Down We Rewind the File back to beginning for fuzzing
-
+	rewind(file); // After Its Done We Rewind the File back to beginning for fuzzing
 	return i; // Return line count
 }
 
@@ -32,29 +36,80 @@ char* get_time() { // Function To Get the Current Time
 	if (time_string == NULL) {
 		printf("Failed Allocating Memory!");
 	}
-
 	time_t current_time = time(NULL);
 	struct tm* local_time = localtime(&current_time);
 	snprintf(time_string, 9, "%02d:%02d:%02d", local_time->tm_hour, local_time->tm_min, local_time->tm_sec);
 	return time_string;
 }
 
-void scan_site(FILE *file, char *baseurl) { // Function To Fuzz Site For Sub Dirs
+int check_if_up(char *url) {  // Quick Check To See If We Can Actually Reach The Website, If We Cant Just Exit program
+	CURL* curl;
+	CURLcode res_code;
+	curl = curl_easy_init();
+	
+	if(curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+		res_code = curl_easy_perform(curl);
+
+		if(res_code == CURLE_OK) {
+			long response_code;
+			res_code = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+
+			return (response_code == 200 || response_code == 302) ? 1 : 0; // One Liner If Else, if true return 1 else return 0
+		} 
+
+	}
+	curl_easy_cleanup(curl);
+	return 0;
+}
+
+void subdomain_Scan(FILE* file, char* baseUrl) {
+	char line[60];
+	char *result;
+	//char *baseurl = baseurl;
+	CURL *curl;
+	CURLcode res_code;
+	curl = curl_easy_init();
+
+	if(curl) {
+		while((result = fgets(line, sizeof(line), file)) != NULL) {
+			line[strcspn(line, "\n")] = 0;
+			char url[200];
+			snprintf(url, sizeof(url), "http://%s.%s", line, baseUrl);
+			//printf("Reaching Out Too %s\n", url);
+			curl_easy_setopt(curl, CURLOPT_URL, url);
+			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+			curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+
+			
+			res_code = curl_easy_perform(curl);
+
+			if (res_code == CURLE_OK) {
+				// printf("CURLE OKE"); WORKS
+				long response_code;
+				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+
+				if (response_code == 200) {
+					printf("[*] Found: %s  %-20s\tResponse Code: %d\n", line, " ", response_code);
+				}
+			}
+		}
+	}
+	curl_easy_cleanup(curl);
+}
+
+void* subdir_scan(void* arg) { // Function To Fuzz Site For Sub Dirs
+	struct ThreadArgs* args = (struct ThreadArgs*)arg;
 	char line[60]; // Buffer To Hold line From File
 	char *result; // Used to Check if line From file == NULL
+	FILE* file = args->file;
+	char* baseurl = args->baseurl;
 
 	CURL *curl; // Create a pointer to a CURL Handle (Just An Easy-to-use Strucutre for handling web requests)
 	CURLcode res_code; // Holds Response Code From request
 	curl = curl_easy_init(); // Set Up Curl Object
 
-	char *time; // Var To Hold Time thats returned From get_time()
-	time = get_time();
-
-	printf("[!] Starting Scan At %s\n", time); // print Starting time
-	printf("\033[1m\x1b[36m=============================================================\x1b[0m\n");
-	printf("||  [*] DIRECTORY %-20s\t[*] RESPONSE CODE  ||\n", " ");                                  // Just Some UI Stuff
-	printf("\033[1m\x1b[36m=============================================================\x1b[0m\n");
-	
 
 	// If Curl Not Empty We Are Set To Go
 	if(curl) {
@@ -73,35 +128,45 @@ void scan_site(FILE *file, char *baseurl) { // Function To Fuzz Site For Sub Dir
 				long res_code; // Response Code Is Stored as a long int
 				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res_code); // Get the response Code and store it in res_code
 
-				if (res_code == 200 || res_code == 302) { // Check if Response Was a 200 or 302
+				if (res_code == 200 || res_code == 302 || res_code == 301 || res_code == 201) { // Check if Response Was a 200 or 302
 
 					printf("[\033[1m\x1b[32m*\x1b[0m] Found: /%-20s\tResponse Code: \033[1m\x1b[32m%ld\x1b[0m\n", line, res_code); // Print Sub Dir we found and the code
 				} 
 				
 			}
+			sleep(0.9);
 		}
 	}
-	printf("\033[1m\x1b[36m=============================================================\x1b[0m\n");
-	time = get_time(); // Get Time Again
-	printf("[!] Scan Finished At %s\n", time); // Print End Time
-	free(time);
+	
+	
 	curl_easy_cleanup(curl); // Invoke CURL to cleanup 
 
 }
 
 int main(int argc, char *argv[])
 {
-	logo(); // Print Logo (needs redoing cause ugly)
-
 	char *result; 
 	FILE *file; // Pointer too a FILE type
 	char *baseurl = argv[1]; // Save The URL user entered into Base_url
 	char *filename = argv[2]; // Save The file to use as wordlist
+	int thread_count = atoi(argv[3]);
 	int wc;
+	char *scan_choice = argv[4];
+	//printf("%s\n", baseurl);
 
-	if (argc < 2) {
-		printf("\033[1m\x1b[31m[!]\x1b[0m USAGE: %s <url> <wordlist>\n", argv[0]); // if user didnt arguments exit
-		printf("\033[1m\x1b[31m[!]\x1b[0m %s http://example.com words.txt", argv[0]);
+	if (argc < 3) {
+		printf("[" ANSI_COLOR_RED ANSI_COLOR_BOLD "!" ANSI_COLOR_RESET "] USAGE: %s <url> <wordlist> <thread Count> <scan type>\n", argv[0]); // if user didnt arguments exit
+		printf("[" ANSI_COLOR_RED ANSI_COLOR_BOLD "!" ANSI_COLOR_RESET "] %s http://example.com words.txt 40, (subdir, subdomain)", argv[0]);
+		return 1;
+	}
+
+	else if (thread_count > 35) {
+		printf("[WARNING] Amount Of Threads Is Recommened To Not Go Over 35...\n");
+		printf("[WARNING] Will Still Procced, CTRL+C To Exit\n");
+	}
+
+	else if ((check_if_up(baseurl)) == 0) { // Check If Site Is Reachable, if not exit program
+		printf("[" ANSI_COLOR_RED ANSI_COLOR_BOLD "WARNING" ANSI_COLOR_RESET "] Website Isnt Reachable, Check URL!");
 		return 1;
 	}
 	
@@ -112,20 +177,76 @@ int main(int argc, char *argv[])
 	}
 	wc = count_words(file, result); // Count Amount of lines in file
 
+	
+
 	printf("\n");
 
-	printf("\033[1m\x1b[36m=============\x1b[0m\x1b[31mTARGET INFO\x1b[0m\033[1m\x1b[36m=============\x1b[0m\n"); // Print Target infomation
+	printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "========================\x1b[0m\033[1m\x1b[36m=============\n" ANSI_COLOR_RESET); // Print Target infomation
 	printf("[+] URL: %s\n", baseurl);
 	printf("[+] METHOD: Get\n");
+	printf("[+] SCAN-TYPE: %s\n", scan_choice);
 	printf("[+] WORDLIST: %s\n", filename);
-	printf("[+] WORDCOUNT: %d\n", wc);
-	printf("\033[1m\x1b[36m========================\x1b[0m\033[1m\x1b[36m=============\x1b[0m\n");
+	printf("[+] WORD-COUNT: %d\n", wc);
+	printf("[+] THREAD-COUNT: %d\n", thread_count);
+	printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "========================\x1b[0m\033[1m\x1b[36m=============\n" ANSI_COLOR_RESET);
 
 	printf("\n\n");
 
-	scan_site(file, baseurl); // Start Fuzzing
+	char *time; // Var To Hold Time thats returned From get_time()
+	time = get_time();
 	
+	
+	if (strcmp(scan_choice, "subdomain") == 0) {
+		printf("[!] Starting Scan At %s\n", time); // print Starting time
+		printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "=============================================================\n" ANSI_COLOR_RESET);
+		printf("||  [*] SUBDOMAIN %-20s\t[*] RESPONSE CODE  ||\n", " ");                                  // Just Some UI Stuff
+		printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "=============================================================\n" ANSI_COLOR_RESET);
+		subdomain_Scan(file, baseurl);
+	}
 
+	else if (strcmp(scan_choice, "subdir") == 0) {
+		printf("[!] Starting Scan At %s\n", time); // print Starting time
+		printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "=============================================================\n" ANSI_COLOR_RESET);
+		printf("||  [*] DIRECTORY %-20s\t[*] RESPONSE CODE  ||\n", " ");                                  // Just Some UI Stuff
+		printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "=============================================================\n" ANSI_COLOR_RESET);
+
+		pthread_t threads[thread_count];
+		struct ThreadArgs args;
+		args.file = file;
+		args.baseurl = baseurl; 
+
+		for (int i = 0; i < thread_count; ++i) {
+			pthread_create(&threads[i], NULL, subdir_scan, (void*)&args);
+		}
+
+		for (int i = 0; i < thread_count; ++i) {
+			pthread_join(threads[i], NULL);
+
+		}
+
+		//subdir_scan(file, baseurl); // Start Fuzzing
+	}
+
+	// pthread_t threads[thread_count];
+	// struct ThreadArgs args;
+	// args.file = file;
+	// args.baseurl = baseurl; 
+
+	// for (int i = 0; i < thread_count; ++i) {
+	// 	pthread_create(&threads[i], NULL, subdir_scan, (void*)&args);
+	// }
+
+	// for (int i = 0; i < thread_count; ++i) {
+	// 	pthread_join(threads[i], NULL);
+
+	// }
+	printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "=============================================================\n" ANSI_COLOR_RESET);
+
+	//subdir_scan(file, baseurl); // Start Fuzzing
+	
+	time = get_time(); // Get Time Again
+	printf("[!] Scan Finished At %s\n", time); // Print End Time
+	free(time);
 	
 	fclose(file); // Close File
 
@@ -133,13 +254,3 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void logo() {
-	printf("||  _________    ___.   ___________                                    ||\n");
-    printf("|| /   _____/__ _\\ |__ \\_   _____/_ __________________ ___________     ||\n");
-    printf("|| \\_____  \\|  |  \\ __ \\ |    __)|  |  \\___   /\\___   // __ \\_  __ \\   ||\n");
-    printf("||  /        \\  |  / \\_\\ \\|     \\ |  |  //    /  /    /\\  ___/|  | \\/  ||\n");
-    printf("|| /_______  /____/|___  /\\___  / |____//_____ \\/_____ \\\\___  >__|     ||\n");
-    printf("||        \\/          \\/     \\/              \\/      \\/    \\/          ||\n");
-    printf("=========================================================================\n");
-
-}
