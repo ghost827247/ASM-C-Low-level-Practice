@@ -21,7 +21,7 @@ struct ThreadArgs { // Struct For values to pass to function For Threading
 };
 
 int count_words(FILE *file, char *result) { // Function To Count the amount of lines in the text file
-	int i = 1;
+	int i = 0;
 	char line[60];
 	while ((result = fgets(line, sizeof(line), file)) != NULL) {
 		i++; // While Line != EMPTY we update the line count
@@ -41,6 +41,7 @@ char* get_time() { // Function To Get the Current Time
 	snprintf(time_string, 9, "%02d:%02d:%02d", local_time->tm_hour, local_time->tm_min, local_time->tm_sec);
 	return time_string;
 }
+
 
 int check_if_up(char *url) {  // Quick Check To See If We Can Actually Reach The Website, If We Cant Just Exit program
 	CURL* curl;
@@ -64,19 +65,35 @@ int check_if_up(char *url) {  // Quick Check To See If We Can Actually Reach The
 	return 0;
 }
 
-void subdomain_Scan(FILE* file, char* baseUrl) {
+
+void print_target_info(char* baseurl, char* type, char* filename, int wc, int thread_count) {
+	printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "====================" ANSI_COLOR_RED ANSI_COLOR_BOLD"TARGET INFO" ANSI_COLOR_RESET ANSI_COLOR_BLUE ANSI_COLOR_BOLD"====================\n" ANSI_COLOR_RESET); // Print Target infomation
+	printf("[+]" ANSI_COLOR_BOLD" URL: " ANSI_COLOR_RESET "%s\n", baseurl);
+	printf("[+]" ANSI_COLOR_BOLD " METHOD: " ANSI_COLOR_RESET "HEAD\n");
+	printf("[+]" ANSI_COLOR_BOLD" SCAN-TYPE: " ANSI_COLOR_RESET "%s\n", type);
+	printf("[+]" ANSI_COLOR_BOLD" WORDLIST: " ANSI_COLOR_RESET "%s\n", filename);
+	printf("[+]" ANSI_COLOR_BOLD " WORD-COUNT: " ANSI_COLOR_RESET "%d\n", wc);
+	printf("[+]" ANSI_COLOR_BOLD " THREAD-COUNT: " ANSI_COLOR_RESET "%d\n", thread_count);
+	printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "===================================================\n" ANSI_COLOR_RESET);
+}
+
+
+void* subdomain_Scan(void* arg) {
+	struct ThreadArgs* args = (struct ThreadArgs*)arg;
 	char line[60];
 	char *result;
 	//char *baseurl = baseurl;
 	CURL *curl;
 	CURLcode res_code;
 	curl = curl_easy_init();
+	FILE* file = args->file;
+	char* baseurl = args->baseurl;
 
 	if(curl) {
 		while((result = fgets(line, sizeof(line), file)) != NULL) {
 			line[strcspn(line, "\n")] = 0;
 			char url[200];
-			snprintf(url, sizeof(url), "http://%s.%s", line, baseUrl);
+			snprintf(url, sizeof(url), "http://%s.%s", line, baseurl);
 			//printf("Reaching Out Too %s\n", url);
 			curl_easy_setopt(curl, CURLOPT_URL, url);
 			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -91,7 +108,7 @@ void subdomain_Scan(FILE* file, char* baseUrl) {
 				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
 				if (response_code == 200) {
-					printf("[*] Found: %s  %-20s\tResponse Code: %d\n", line, " ", response_code);
+					printf("[*] Found: %s  %-20s\tResponse Code: [%d\n]", line, " ", response_code);
 				}
 			}
 		}
@@ -130,8 +147,11 @@ void* subdir_scan(void* arg) { // Function To Fuzz Site For Sub Dirs
 
 				if (res_code == 200 || res_code == 302 || res_code == 301 || res_code == 201) { // Check if Response Was a 200 or 302
 
-					printf("[\033[1m\x1b[32m*\x1b[0m] Found: /%-20s\tResponse Code: \033[1m\x1b[32m%ld\x1b[0m\n", line, res_code); // Print Sub Dir we found and the code
+					printf("[" ANSI_COLOR_GREEN ANSI_COLOR_BOLD "*" ANSI_COLOR_RESET "] Found: /%-20s\tResponse Code: " ANSI_COLOR_GREEN ANSI_COLOR_BOLD "[%ld]\n" ANSI_COLOR_RESET, line, res_code); // Print Sub Dir we found and the code
 				} 
+				else if (res_code == 403 || res_code == 402) {
+					printf("[" ANSI_COLOR_RED  ANSI_COLOR_BOLD "*" ANSI_COLOR_RESET "] Found: /%-20s\tResponse Code: " ANSI_COLOR_RED ANSI_COLOR_BOLD "[%ld]\n" ANSI_COLOR_RESET, line, res_code);
+				}
 				
 			}
 			sleep(0.9);
@@ -181,14 +201,7 @@ int main(int argc, char *argv[])
 
 	printf("\n");
 
-	printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "========================\x1b[0m\033[1m\x1b[36m=============\n" ANSI_COLOR_RESET); // Print Target infomation
-	printf("[+] URL: %s\n", baseurl);
-	printf("[+] METHOD: Get\n");
-	printf("[+] SCAN-TYPE: %s\n", scan_choice);
-	printf("[+] WORDLIST: %s\n", filename);
-	printf("[+] WORD-COUNT: %d\n", wc);
-	printf("[+] THREAD-COUNT: %d\n", thread_count);
-	printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "========================\x1b[0m\033[1m\x1b[36m=============\n" ANSI_COLOR_RESET);
+	print_target_info(baseurl, scan_choice, filename, wc, thread_count);
 
 	printf("\n\n");
 
@@ -197,15 +210,29 @@ int main(int argc, char *argv[])
 	
 	
 	if (strcmp(scan_choice, "subdomain") == 0) {
-		printf("[!] Starting Scan At %s\n", time); // print Starting time
+		printf(ANSI_COLOR_BOLD "[!] Starting Scan At %s\n" ANSI_COLOR_RESET, time); // print Starting time
 		printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "=============================================================\n" ANSI_COLOR_RESET);
 		printf("||  [*] SUBDOMAIN %-20s\t[*] RESPONSE CODE  ||\n", " ");                                  // Just Some UI Stuff
 		printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "=============================================================\n" ANSI_COLOR_RESET);
-		subdomain_Scan(file, baseurl);
+
+		pthread_t threads[thread_count];
+		struct ThreadArgs args;
+		args.file = file;
+		args.baseurl = baseurl;
+
+		for (int i = 0; i < thread_count; ++i) {
+			pthread_create(&threads[i], NULL, subdomain_Scan, (void*)&args);
+		}
+
+		for (int i = 0; i < thread_count; ++i) {
+			pthread_join(threads[i], NULL);
+		}
+
+		//subdomain_Scan(file, baseurl);
 	}
 
 	else if (strcmp(scan_choice, "subdir") == 0) {
-		printf("[!] Starting Scan At %s\n", time); // print Starting time
+		printf(ANSI_COLOR_BOLD "[!] Starting Scan At %s\n" ANSI_COLOR_RESET, time); // print Starting time
 		printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "=============================================================\n" ANSI_COLOR_RESET);
 		printf("||  [*] DIRECTORY %-20s\t[*] RESPONSE CODE  ||\n", " ");                                  // Just Some UI Stuff
 		printf(ANSI_COLOR_BLUE ANSI_COLOR_BOLD "=============================================================\n" ANSI_COLOR_RESET);
