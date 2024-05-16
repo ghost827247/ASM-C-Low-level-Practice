@@ -15,7 +15,6 @@ USAGE
 
     ./fuzzer http://example.com wordlist.txt <Amount Of Threads> <Scan Choice> (subdir, Subdomain)
 
-![Screenshot_2024-05-13_00-02-03](https://github.com/zevuxo1/ASM-C-Low-level-Practice/assets/155918223/e5252c14-589e-41d7-a907-0086b501dd6e)
+![Screenshot_2024-05-17_01-02-47](https://github.com/zevuxo1/ASM-C-Low-level-Practice/assets/155918223/fd0982f4-bd5a-477a-89e3-58d19d9668b4)
 
-Also Dont Mind All The Ugly ANSI codes i used in the string instead of using the defined values, ill change that
-The logo and UI need updating too its kind of ugly
+
