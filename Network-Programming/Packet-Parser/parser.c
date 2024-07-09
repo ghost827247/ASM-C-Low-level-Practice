@@ -219,6 +219,7 @@ int main(int argc, char *argv[])
 		print_data(buffer, data_size);
 		printf("\n\n\n\n");
 	}
-
+	close(sock);
+	free(buffer);
 	return 0;
 }
