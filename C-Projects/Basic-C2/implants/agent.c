@@ -108,6 +108,7 @@ char* get_command(const char* ip, int port, int sockFD) {
 }
 
 // Stupid Fucking Function, the server just refuses to acknowledge this Post Request
+// Wireshark captures it succesfully but the server just doesnt do shit
 // need to test more
 int send_output(int sockFD, const char* command, const char* ip, int portNo) {
 	char headers[BUFFER_SIZE] = { 0 };
