@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/login.css') }}">
+	<title>Serpant C2</title>
+</head>
+<body>
+	<div class="box">
+		<div class="left-side">
+			<h1>SerpantC2</h1>
+		</div>
+		<div class="right-side">
+			<form action="/login" method="POST">
+				<label for="username">Username:</label>
+				<input type="text" name="username">
+				<label for="password">Password:</label>
+				<input type="password" name="password">
+				<input type="submit" name="submit">
+				{% if error %}
+					<p style="color: red;">{{ error }}</p>
+				{% endif %}
+			</form>
+		</div>
+	</div>
+</body>
+</html>
