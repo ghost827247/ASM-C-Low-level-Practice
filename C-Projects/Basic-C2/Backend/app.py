@@ -1,47 +1,62 @@
-from flask import Flask, request, redirect, url_for, render_template_string, session
+from flask import Flask, render_template, request, redirect, url_for, session
+
+# FIX COMMAND NOT CHANGING BACK TO EMTPY
+# DO CSS FOR /INPUT, ADD COMPUTER IDENTIFIERS
+
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for session management
+app.secret_key = 'supersecretkey'  # Necessary for flash messages
 
-# Variable to store the current command and output
-current_command = ''
-stored_output = ''
+username = "admin"
+password = "admin"
+output = ""
+command = ""
+##com_output = None
 
-@app.route('/get_command', methods=['GET'])
-def get_command():
-    global current_command
-    response = f"<command>{current_command}</command>"
-    return response, 200, {'Content-Type': 'text/plain'}
+@app.route("/login", methods=['POST', 'GET'])
+def login():
+    error = "Username or Password is incorrect"
+    if request.method == "POST":
+        user = request.form['username']
+        passs = request.form['password']
 
-@app.route('/send_output', methods=['POST'])
-def send_output():
-    global stored_output
-    output = request.data.get('output')
-    stored_output = output
-    return redirect(url_for('input_page'))
+        if user == username and passs == password:
+            return redirect(url_for('input'))
+        else:
+            return render_template("login.html", error=error)
 
-@app.route('/update_command', methods=['POST'])
+    return render_template("login.html")
+
+
+@app.route("/input", methods=['GET', 'POST'])
+def input():
+    out = output
+    return render_template("input.html", output=out)
+
+@app.route("/update_command", methods=['POST'])
 def update_command():
-    global current_command
-    new_command = request.form.get('command')
-    current_command = new_command
-    return redirect(url_for('input_page'))
+    global command
+    command = request.form.get('command')
+    return redirect(url_for("input"))
 
-@app.route('/input', methods=['GET', 'POST'])
-def input_page():
-    if request.method == 'POST':
-        new_command = request.form.get('command')
-        return redirect(url_for('update_command', command=new_command))
 
-    return render_template_string('''
-        <form method="post" action="/update_command">
-            Command: <input type="text" name="command">
-            <input type="submit" value="Submit">
-        </form>
-        <h2>Stored Output:</h2>
-        <div>{{ stored_output }}</div>
-    ''', stored_output=stored_output)
+@app.route("/get_command", methods=['GET'])
+def get_command():
+    global command
+    if command:
+        return command
+    else:
+        return "No command available."
 
+@app.route("/send_command", methods=['POST'])
+def send_command():
+    if request.method == "POST":
+        command = ""
+        global output
+        output = request.form.get('output') # Store the output in the session
+       
+        return '', 204  # Return no content to avoid redirection or message
+        
+        
 if __name__ == '__main__':
-    # Run the Flask app on port 5000
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host="0.0.0.0", port=80, debug=True)
