@@ -1,7 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 
 # FIX COMMAND NOT CHANGING BACK TO EMTPY
-# DO CSS FOR /INPUT, ADD COMPUTER IDENTIFIERS
+# DO CSS FOR /INPUT 
+# ADD COMPUTER IDENTIFIERS
+# MAKE HTML BETTER FOR /INPUT SHIT SO FUCKING TRASH RIGHT NOW
+
+# Note To Self, Web Dev Fucking Sucks
 
 
 app = Flask(__name__)
