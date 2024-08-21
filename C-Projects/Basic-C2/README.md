@@ -4,3 +4,5 @@ idk shit about web development apart from basic html/css either so its a good le
 Uses LibCurl To Make the HTTP Requests, probably Not the Best Way but fuck it
 
 It is not even close to finished, shit doesnt work half the time
+
+the UI is so fucking ugly too, need to learn better CSS
