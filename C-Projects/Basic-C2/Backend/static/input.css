@@ -1,0 +1,101 @@
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: grey;
+}
+
+.sidebar {
+    height: 100%;
+    width: 250px;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    background-color: #111;
+    overflow-x: hidden;
+    padding-top: 20px;
+}
+
+.sidebar h1 {
+    padding: 10px 15px;
+    text-transform: uppercase;
+    font-size: 18px;
+    color: white;
+    border-bottom: 1px solid grey;
+}
+
+.content {
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    align-items: center; /* Center items horizontally */
+    justify-content: center; /* Center items vertically */
+    height: 100vh; /* Full viewport height */
+    margin-left: 250px; /* Same as the width of the sidebar */
+    padding: 20px; /* Optional: Add some padding */
+}
+
+.form-container {
+    margin-bottom: 20px; /* Space between form and output */
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: white;
+}
+
+.command-input {
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    padding: 8px;
+    width: 100%;
+    max-width: 300px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+input[type="submit"] {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+input[type="submit"]:hover {
+    background-color: #45a049;
+}
+
+.output-text {
+    border: 2px solid black;
+    width: 40%;
+    max-width: 600px; 
+    height: auto; 
+    min-height: 150px; 
+    text-align: center;
+    padding: 20px; 
+    overflow: auto; 
+    box-sizing: border-box; 
+}
+
+/* Responsive design adjustments */
+@media screen and (max-width: 700px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+    .sidebar h1 {
+        text-align: center;
+    }
+    .content {
+        margin-left: 0;
+    }
+}
