@@ -1,1 +1,4 @@
-Just a Basic ARP Spoofer, plan to add a sniffing componant and add features such as SSL Stripping ect
+Wanted to Learn More about ARP so decided to make a basic ARP Spoofer
+
+Added a ARP network Discovery function 
+Planning to Add a Basic Network Sniffer 
