@@ -94,5 +94,5 @@ struct arphdr {
 int scan_network();
 void parse_packet(unsigned char *packet);
 char* get_ieee(uint8_t *mac);
-int entry(char* ip, char *gateway);
+int entry(char* ip, char* gateway, char* tMac, char* rMac);
 int main(void);
