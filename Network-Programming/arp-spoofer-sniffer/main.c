@@ -7,6 +7,8 @@ char *ip = NULL;
 char *router_ip = NULL;
 char *tMac = NULL;
 char *rMac = NULL;
+pid_t spoofer_pid = -1;
+pid_t sniifer_pid = -1;
 void print_line_with_color(const char* line, int color_code) {
     printf("\033[38;5;%dm%s\033[0m\n", color_code, line);
 }
@@ -56,6 +58,7 @@ void print_banner(int choice) {
 		printf("%s|----%s[%s%s+%s]%s Target%s <IP> <GATEWAY>: Specify Which Computer We Want to Poison the ARP Entry's Of\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
 		printf("%s|----%s[%s%s+%s]%s Spoof%s: Start ARP Spoofing\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
 		printf("%s|----%s[%s%s+%s]%s Sniff%s: Start Sniffing Network Traffic\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
+		printf("%s|----%s[%s%s+%s]%s Stop <choice>%s: Choose Process To Stop, spoof or sniff\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
 		printf("%s|----%s[%s%s+%s]%s Clear%s: Clear Screen\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
 		printf("%s|----%s[%s%s+%s]%s Banner%s: Print Banner\n",BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
 		printf("%s|----%s[%s%s+%s]%s ?%s: Display This Help Message\n\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
@@ -138,11 +141,64 @@ void compare_choice(char* str) {
 			print_colors("Enter Target Details First", 1);
 			return;
 		} else {
-			entry(ip, router_ip, tMac, rMac);
+			pid_t pID = fork();
+			if(pID == 0) {
+
+				entry(ip, router_ip, tMac, rMac);
+
+				exit(0);
+			}
+			else if (pID < 0) {
+				print_colors("Failed Starting Spoofer", 1);
+			}
+			else {
+				spoofer_pid = pID;
+				print_colors("Spoofer Started!", 0);
+			}
+			// entry(ip, router_ip, tMac, rMac);
 		}
 		
 	}
 
+	// Handle Command to Stop Spoofer Or Sniffer
+	else if(strncmp(str, "stop", 4) == 0) {
+		char* token = strtok(str, " ");
+
+		if (token == NULL) {
+			print_colors("Must Specify What to Stop", 1);
+		}
+
+		token = strtok(NULL, "\n");
+
+		if(strcmp(token, "spoofer") == 0) {
+			if (spoofer_pid > 0) {
+				if(kill(spoofer_pid, SIGTERM) == 0) {
+					print_colors("Spoofer Stopped", 0);
+					spoofer_pid = -1;
+				} else {
+					print_colors("Failed To Stop Spoofer", 1);
+				}
+			} else {
+				print_colors("Spoofer Isnt Running", 1);
+			}
+		}
+		else if(strcmp(token, "sniffer") == 0) {
+			if(sniifer_pid > 0) {
+				if(kill(sniifer_pid, SIGTERM) == 0) {
+					print_colors("Sniffer Stopped", 0);
+					sniifer_pid = -1;
+				} else {
+					print_colors("Failed Stopping Sniffer", 1);
+				}
+			} else {
+				print_colors("Sniffer Isnt Running", 1);
+			}
+		}
+		
+		
+	}
+
+	// TODO Create Sniffer.c and parse this command
 	else if (strcmp(str, "sniff") == 0) {
 		if (ip == NULL || router_ip == NULL) {
 			printf("[-] Enter Target Details First\n");
@@ -150,8 +206,28 @@ void compare_choice(char* str) {
 		printf("Make This Nigga\n");
 	}
  
+ 	// Below Functions Are obvious
 	else if (strcmp(str, "exit") == 0 || strcmp(str, "quit") == 0) {
-		exit(1);
+		if (spoofer_pid > 0) {
+			if(kill(spoofer_pid, SIGTERM) == 0) {
+				exit(0);
+			} else {
+				print_colors("Failed Stopping Spoofer, Try Again", 1);
+			}
+		} 
+		
+
+		else if (sniifer_pid > 0) {
+			if(kill(sniifer_pid, SIGTERM) == 0) {
+				exit(0);
+			} else {
+				print_colors("Failed Stopping Sniffer, Try Again", 1);
+			}
+		} 
+		else {
+			exit(0);
+		}
+		
 	} 
 
 	else if (strcmp(str, "clear") == 0 || strcmp(str, "cls") == 0) {
