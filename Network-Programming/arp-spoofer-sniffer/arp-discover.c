@@ -4,8 +4,17 @@
 
 // arp mac address 00:00:00:00:00:00
 // arp ip address: 192.168.1.X
+int sockFD;
+
+void sig_handl(int sig) {
+	system("clear && clear");
+	close(sockFD);
+	main();
+}
+
 
 int scan_network() {
+	signal(SIGINT, sig_handl);
 	void parse_packet(unsigned char* packet);
 	unsigned char my_mac[HARDWARE_LENGTH] = {0x00, 0x0c, 0x29, 0xd9, 0x94, 0x21};
 	unsigned char broadcast[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -19,7 +28,7 @@ int scan_network() {
 	struct sockaddr_ll sa;
 	struct ifreq ifr;
 
-	int sockFD;
+	
 
 	if((sockFD = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ARP))) < 0) {
 		printf("Error: %s", strerror(errno));
@@ -59,7 +68,7 @@ int scan_network() {
 	memcpy(arp_header->target_hw_addr, holder, 6);
 
 	printf("%s==================================================================================================%s\n", COLOR_1, RESET);
-	printf("%s     IP %-30s MAC %-30s IEEE%s\n", COLOR_2, " ", " ", RESET);
+	printf("%s     IP %-30s MAC %-30s VENDOR%s\n", COLOR_2, " ", " ", RESET);
 	printf("%s==================================================================================================%s\n", COLOR_3, RESET);
 
 	for (int i = 0; i<50; i++) {
@@ -99,12 +108,16 @@ void parse_packet(unsigned char *packet) {
 	struct in_addr ia;
 	char* ieee;
 	
+	
 
 	if(ether_header->h_proto == ntohs(ARP_PROTOCOL)) {
 		if (arp_header->op == ntohs(2)) {
 			memcpy(&ia, arp_header->sender_proto_addr, sizeof(ia));
 			ieee = get_ieee(arp_header->sender_hw_addr);
-
+			// char fpBuffer[400];
+			// snprintf(fpBuffer, sizeof(fpBuffer), "%s %02x:%02x:%02x:%02x:%02x:%02x\n", inet_ntoa(ia), arp_header->sender_hw_addr[0], arp_header->sender_hw_addr[1], arp_header->sender_hw_addr[2], arp_header->sender_hw_addr[3], arp_header->sender_hw_addr[4],arp_header->sender_hw_addr[5]);
+			// fwrite(fpBuffer, sizeof(char), strlen(fpBuffer), fp);
+			// memset(fpBuffer, 0, sizeof(fpBuffer));
 			printf("%-30s %02x:%02x:%02x:%02x:%02x:%02x                       %s \n", inet_ntoa(ia), arp_header->sender_hw_addr[0],
 																		 arp_header->sender_hw_addr[1],
 																		 arp_header->sender_hw_addr[2],
@@ -133,7 +146,7 @@ char* get_ieee(uint8_t *mac) {
 
 	FILE* fp;
 
-	fp = fopen("iiee", "r");
+	fp = fopen("files/iiee", "r");
 	char* manufac = NULL;
 	char* fail = "Unknown Vendor";
 
@@ -155,3 +168,4 @@ char* get_ieee(uint8_t *mac) {
 
 }
 
+// target 192.168.1.23 192.168.1.1
