@@ -1,8 +1,12 @@
 #include "header.h"
+//sudo iptables -A FORWARD -i eth0 -j ACCEPT
+//sudo iptables -A FORWARD -o eth0 -j ACCEPT
 
 
 char *ip = NULL;
 char *router_ip = NULL;
+char *tMac = NULL;
+char *rMac = NULL;
 void print_line_with_color(const char* line, int color_code) {
     printf("\033[38;5;%dm%s\033[0m\n", color_code, line);
 }
@@ -10,22 +14,30 @@ int colors[] = {
         18, 19, 20, 21, 26, 27, 28, 33, 39, 44, 45, 46, 47
 };
 
+
+void print_colors(char* str, int okay_or_error) {
+	if (okay_or_error == 0) {
+		printf("%s[%s*%s%s]%s %s\n", BOLD, TEXT_GREEN, RESET, BOLD, RESET, str);
+	} else {
+		printf("%s[%s!%s%s]%s %s\n", BOLD, TEXT_RED, RESET, BOLD, RESET, str);
+	}
+	
+}
+
 void print_banner(int choice) {
 
 	if(choice == 1) {
 		// UI so ugly fix this shit
 		const char* lines[] = {
-	        "+=======================================================+",
-	        "|    ___                  ___  ________ ________  ___   |",
-	        "|   / _ \\                 |  \\/  |_   _|_   _|  \\/  |   |",
-	        "|  / /_\\ \\_ __ _ __ ______| .  . | | |   | | | .  . |   |",
-	        "|  |  _  | '__| '_ \\______| |\\/| | | |   | | | |\\/| |   |",
-	        "|  | | | | |  | |_) |     | |  | |_| |_  | | | |  | |   |",
-	        "|  \\_| |_/_|  | .__/      \\_|  |_/\\___/  \\_/ \\_|  |_/   |",
-	        "|             | |                                       |",
-	        "|             |_|                                       |",
-	        "|                        Created By Zevuxo              |",
-	        "+=======================================================+"
+	        "+========================================================================+",
+	        "|    _____ _               _                       ___  ____________     |",
+	        "|   /  ___| |             | |                     / _ \\ | ___ \\ ___ \\    |",
+	        "|   \\ `--.| |__   __ _  __| | _____      ________/ /_\\ \\| |_/ / |_/ /    |",
+	        "|    `--. \\ '_ \\ / _` |/ _` |/ _ \\ \\ /\\ / /______|  _  ||    /|  __/     |",
+	        "|   /\\__/ / | | | (_| | (_| | (_) \\ V  V /       | | | || |\\ \\| |        |",
+	        "|   \\____/|_| |_|\\__,_|\\__,_|\\___/ \\_/\\_/        \\_| |_/\\_| \\_\\_|        |",
+	        "|                        Created By Zevuxo                               |",
+	        "+=========================================================================+"
 	    };
 
 	    int line_num = sizeof(lines) / sizeof(lines[0]);
@@ -39,19 +51,42 @@ void print_banner(int choice) {
 	}
 	else if (choice == 2) {
 		// Straight up skid ddos UI
-		printf("[*] USAGE\n");
-		printf("%s|----%s[+] Scan: %sDiscover Hosts On the Network Using ARP%s\n", BOLD, RESET, BOLD, RESET);
-		printf("%s|----%s[+] Target <IP> <GATEWAY>: %sSpecify Which Computer We Want to Poison the ARP Entry's Of%s\n", BOLD, RESET,BOLD, RESET);
-		printf("%s|----%s[+] Spoof: %sStart ARP Spoofing%s\n", BOLD, RESET,BOLD, RESET);
-		printf("%s|----%s[+] Sniff: %sStart Sniffing Network Traffic%s\n", BOLD, RESET,BOLD, RESET);
-		printf("%s|----%s[+] Clear: %sClear Screen%s\n", BOLD, RESET, BOLD, RESET);
-		printf("%s|----%s[+] Banner: %sPrint Banner%s\n", BOLD, RESET, BOLD, RESET);
-		printf("%s|----%s[+] ?: %sDisplay This Help Message%s\n\n", BOLD, RESET, BOLD, RESET);
+		print_colors("USAGE", 0);
+		printf("%s|----%s[%s%s+%s]%s Scan%s: Discover Hosts On the Network Using ARP\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
+		printf("%s|----%s[%s%s+%s]%s Target%s <IP> <GATEWAY>: Specify Which Computer We Want to Poison the ARP Entry's Of\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
+		printf("%s|----%s[%s%s+%s]%s Spoof%s: Start ARP Spoofing\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
+		printf("%s|----%s[%s%s+%s]%s Sniff%s: Start Sniffing Network Traffic\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
+		printf("%s|----%s[%s%s+%s]%s Clear%s: Clear Screen\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
+		printf("%s|----%s[%s%s+%s]%s Banner%s: Print Banner\n",BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
+		printf("%s|----%s[%s%s+%s]%s ?%s: Display This Help Message\n\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET);
 
 
 
 	}
 
+}
+
+int find_mac(char* ip, FILE *fp, int which_mac) {
+	char strBuffer[50];
+	while(fgets(strBuffer, sizeof(strBuffer), fp) != NULL) {
+		char* token = strtok(strBuffer, " ");
+		if (strcmp(ip, token) == 0) {
+			if( which_mac == 1) {
+				tMac = strdup(strtok(NULL, "\n"));
+			} else {
+				rMac = strdup(strtok(NULL, "\n"));
+			}
+			rewind(fp);
+			break;
+		}
+	}
+	if (tMac == NULL) {
+		return 1;
+	} else if (rMac == NULL) {
+		return 2;
+	} else {
+		return 0;
+	}
 }
 
 void compare_choice(char* str) {
@@ -67,20 +102,45 @@ void compare_choice(char* str) {
 	}
 
 	else if (strncmp(str, "target", 6) == 0) {
+		FILE* fp;
 		char* token = strtok(str, " ");
 		ip = strtok(NULL, " ");
 		router_ip = strtok(NULL, "\n");
-		printf("[*] Target: %s\n", ip);
-		printf("[*] Gateway: %s\n", router_ip);
+
+		fp = fopen("files/macs.txt", "r");
+		if(fp == NULL) {
+			printf("Failed Opening Mac File\n");
+			return;
+		}
+		int check;
+		char strBuffer[50];
+		check = find_mac(ip, fp, 1);
+		if (check == 1) {
+			printf("[-] Failed Getting Target MAC, Does The IP Exist?\n"); return;
+		}
+		check = find_mac(router_ip, fp, 0);
+		if (check == 2) {
+			printf("[-] Failed Getting Routers MAC, Does The IP Exist?\n"); return;
+		}
+
+
+		print_colors("Target Details", 0);
+		printf("%s|----%s[%s%s+%s]%s Target IP%s: %s\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET, ip);
+		printf("%s|----%s[%s%s+%s]%s Target MAC%s: %s\n",BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET, tMac);
+		printf("|\n");
+		printf("%s|----%s[%s%s+%s]%s Gateway IP%s: %s\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET, router_ip);
+		printf("%s|----%s[%s%s+%s]%s Gateway MAC%s: %s\n", BOLD, RESET, BOLD, TEXT_BLUE, RESET, BOLD, RESET, rMac);
 	}
 
 	else if(strcmp(str, "spoof") == 0) {
-		if (ip == NULL || router_ip == NULL) {
+		if (ip == NULL || router_ip == NULL || tMac == NULL || rMac == NULL) {
 			print_banner(2);
-			printf("[-] Enter Target Details First\n");
+			print_colors("Enter Target Details First", 1);
 			return;
+		} else {
+			entry(ip, router_ip, tMac, rMac);
 		}
-		entry(ip, router_ip);
+		
 	}
 
 	else if (strcmp(str, "sniff") == 0) {
@@ -90,11 +150,11 @@ void compare_choice(char* str) {
 		printf("Make This Nigga\n");
 	}
  
-	else if (strcmp(str, "exit") == 0) {
+	else if (strcmp(str, "exit") == 0 || strcmp(str, "quit") == 0) {
 		exit(1);
 	} 
 
-	else if (strcmp(str, "clear") == 0) {
+	else if (strcmp(str, "clear") == 0 || strcmp(str, "cls") == 0) {
 		system("clear");
 
 	}
@@ -107,7 +167,7 @@ void compare_choice(char* str) {
 		print_banner(1);
 	}
 	else {
-		printf("[-] Invalid Command\n");
+		print_colors("Invalid Command", 1);
 	}
 
 }
