@@ -6,8 +6,8 @@ unsigned char gateway_ip[PROTOCOL_LENGTH];
 unsigned char my_ip[PROTOCOL_LENGTH] = {192, 168, 1 , 31};
 
 unsigned char my_mac[HARDWARE_LENGTH] = {0x00, 0x0c, 0x29, 0xd9, 0x94, 0x21};
-unsigned char target_mac[HARDWARE_LENGTH] = {0xD0, 0x39, 0x57, 0xE3, 0x80, 0xA9};
-unsigned char router_mac[HARDWARE_LENGTH] = {0xd0, 0xdb, 0xb7, 0x94, 0xd2, 0x3a};
+unsigned char target_mac[HARDWARE_LENGTH];
+unsigned char router_mac[HARDWARE_LENGTH];
 unsigned char test[HARDWARE_LENGTH]       = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 int sockfd;
@@ -97,8 +97,16 @@ void create_router_packet(unsigned char* packet) {
 
 }
 
-int entry(char* ip, char* gateway)
+int entry(char* ip, char* gateway, char* tMac, char* rMac)
 {
+	sscanf(tMac, "%02x:%02x:%02x:%02x:%02x:%02x", 
+               &target_mac[0], &target_mac[1], &target_mac[2], 
+               &target_mac[3], &target_mac[4], &target_mac[5]);
+
+	sscanf(rMac, "%02x:%02x:%02x:%02x:%02x:%02x", 
+               &router_mac[0], &router_mac[1], &router_mac[2], 
+               &router_mac[3], &router_mac[4], &router_mac[5]);
+
 	if((inet_pton(AF_INET, gateway, gateway_ip)) <= 0) {
 		printf("fail");
 	}
