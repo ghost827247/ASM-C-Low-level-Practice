@@ -13,6 +13,8 @@ unsigned char test[HARDWARE_LENGTH]       = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 int sockfd;
 
 
+
+
 /*
 ARP REPLY PACKET STRUCTURE
 
@@ -177,7 +179,7 @@ int entry(char* ip, char* gateway, char* tMac, char* rMac)
 	**/
 	int x = 1;
 	while(1) {
-		printf("\r[*] Sent %d Packets", x);
+		//printf("\r[*] Sent %d Packets", x);
 		if(sendto(sockfd, buffer1, sizeof(buffer1), 0, (struct sockaddr*)&sa, sizeof(sa)) < 0) {
 			printf("[-] Error: %s\n", strerror(errno));
 			break;
