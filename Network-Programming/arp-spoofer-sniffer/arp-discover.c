@@ -1,4 +1,5 @@
 #include "header.h"
+#include <math.h>
 
 // ethernet mac address: ff:ff:ff:ff:ff:ff
 
@@ -12,15 +13,46 @@ void sig_handl(int sig) {
 	main();
 }
 
+int calc_cidr(char* str) {
+	int amount;
+	char* token;
+	char* temp = strdup(str);
 
-int scan_network() {
+	token = strtok(temp, "/");
+	token = strtok(NULL, "\n");
+	int range = atoi(token);
+	if(range < 0 || range > 32) {
+		print_colors("Invalid CIDR Range", 1);
+		free(temp);
+		return -1;
+	}
+
+	double float_amount = pow(2, 32 - range) - 2;
+	amount = (int)float_amount;
+	free(temp);
+	return amount;
+
+}
+
+
+int scan_network(char* ip_range) {
+	int ip_nums;
+	if(ip_range == NULL) {
+		ip_nums = 50;
+	} else {
+		ip_nums = calc_cidr(ip_range);
+		if(ip_nums < 0) {
+			return -1;
+		}
+	}
+
 	signal(SIGINT, sig_handl);
 	void parse_packet(unsigned char* packet);
 	unsigned char my_mac[HARDWARE_LENGTH] = {0x00, 0x0c, 0x29, 0xd9, 0x94, 0x21};
 	unsigned char broadcast[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	unsigned char holder[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	unsigned char my_ip[PROTOCOL_LENGTH] = {192, 168, 1 , 31};
-	unsigned char my_ip2[PROTOCOL_LENGTH] = {192, 168, 1 , 1};
+	unsigned char start_ip[PROTOCOL_LENGTH] = {192, 168, 1 , 1};
 	unsigned char buffer[sizeof(struct ethhdr) + sizeof(struct arphdr)];
 	struct ethhdr *ether_header = (struct ethhdr*)buffer;
 	struct arphdr *arp_header = (struct arphdr*)(buffer + sizeof(struct ethhdr));
@@ -71,9 +103,9 @@ int scan_network() {
 	printf("%s     IP %-30s MAC %-30s VENDOR%s\n", COLOR_2, " ", " ", RESET);
 	printf("%s==================================================================================================%s\n", COLOR_3, RESET);
 
-	for (int i = 0; i<50; i++) {
-		my_ip2[3] = i;
-		memcpy(arp_header->target_proto_addr, my_ip2, 4);
+	for (int i = 0; i<ip_nums; i++) {
+		start_ip[3] = i;
+		memcpy(arp_header->target_proto_addr, start_ip, 4);
 
 
 		if(sendto(sockFD, buffer, sizeof(buffer), 0, (struct sockaddr*)&sa, sizeof(sa)) < 0) {
