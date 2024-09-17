@@ -32,6 +32,7 @@
 #define COLOR_1 "\033[38;5;20m"
 #define COLOR_2 "\033[38;5;46m"
 #define COLOR_3 "\033[38;5;27m"
+#define dash_color "\033[38;5;44m"
 
 // Text Colors
 #define TEXT_BLACK      "\033[30m"
@@ -56,25 +57,22 @@
 #define TEXT_BRIGHT_CYAN   "\033[96m"
 #define TEXT_BRIGHT_WHITE  "\033[97m"
 
-// Background Colors
-#define BACKGROUND_BLACK      "\033[40m"
-#define BACKGROUND_RED        "\033[41m"
-#define BACKGROUND_GREEN      "\033[42m"
-#define BACKGROUND_YELLOW     "\033[43m"
-#define BACKGROUND_BLUE       "\033[44m"
-#define BACKGROUND_MAGENTA    "\033[45m"
-#define BACKGROUND_CYAN       "\033[46m"
-#define BACKGROUND_WHITE      "\033[47m"
+// for the promtp 
 
-// Bright Background Colors
-#define BACKGROUND_BRIGHT_BLACK  "\033[100m"
-#define BACKGROUND_BRIGHT_RED    "\033[101m"
-#define BACKGROUND_BRIGHT_GREEN  "\033[102m"
-#define BACKGROUND_BRIGHT_YELLOW "\033[103m"
-#define BACKGROUND_BRIGHT_BLUE   "\033[104m"
-#define BACKGROUND_BRIGHT_MAGENTA "\033[105m"
-#define BACKGROUND_BRIGHT_CYAN   "\033[106m"
-#define BACKGROUND_BRIGHT_WHITE  "\033[107m"
+
+#define one  "\033[38;5;18m"
+#define two  "\033[38;5;19m"
+#define three  "\033[38;5;20m"
+#define foor  "\033[38;5;21m"
+#define five  "\033[38;5;26m"
+#define six  "\033[38;5;27m"
+#define seven  "\033[38;52;28m"
+#define eigth  "\033[38;5;33m"
+#define nine  "\033[38;5;39m"
+#define ten  "\033[38;5;44m"
+#define eleven  "\033[38;5;45m"
+#define twelve  "\033[38;5;46m"
+#define thirteen  "\033[38;5;47m"
 
 
 
@@ -91,8 +89,9 @@ struct arphdr {
     uint8_t target_proto_addr[PROTOCOL_LENGTH]; 
 };
 
-int scan_network();
+int scan_network(char* ip_range);
 void parse_packet(unsigned char *packet);
 char* get_ieee(uint8_t *mac);
 int entry(char* ip, char* gateway, char* tMac, char* rMac);
 int main(void);
+void print_colors(char* str, int okay_or_error);
