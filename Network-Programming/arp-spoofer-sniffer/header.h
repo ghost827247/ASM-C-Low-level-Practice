@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <ctype.h>
+#include <netinet/ip_icmp.h>
 
 
 
@@ -95,3 +96,5 @@ char* get_ieee(uint8_t *mac);
 int entry(char* ip, char* gateway, char* tMac, char* rMac);
 int main(void);
 void print_colors(char* str, int okay_or_error);
+int sniffer_entry(void);
+void print_input();
