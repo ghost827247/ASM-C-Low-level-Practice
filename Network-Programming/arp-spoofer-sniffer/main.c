@@ -38,17 +38,17 @@ void print_banner(int choice) {
 	if(choice == 1) {
 		// UI so ugly fix this shit
 		const char* lines[] = {
-	        "╔═════════════════════════════════════════════════════════════════════════════════════╗",
-	        "║    _________.__    .__  __    __                         _________                  ║",
-	        "║   /   _____/|  |__ |__|/  |__/  |_  ___________          \\_   ___ \\_____  ______    ║",
-	        "║   \\_____  \\ |  |  \\|  \\   __\\   __\\/ __ \\_  __ \\  ______ /    \\  \\/\\__  \\ \\____ \\   ║",
-	        "║   /        \\|   Y  \\  ||  |  |  | \\  ___/|  | \\/ /_____/ \\     \\____/ __ \\|  |_> >  ║",
-	        "║  /_______  /|___|  /__||__|  |__|  \\___  >__|             \\______  (____  /   __/   ║",
-	        "║          \\/      \\/                    \\/                        \\/     \\/|__|      ║",
-	        "║                                                                                     ║",
-	        "║                       The Worse BetterCap                                           ║",
-	        "║                                Created By Zevuxo                                    ║",
-	        "╚═════════════════════════════════════════════════════════════════════════════════════╝"
+	        "\t\t╔═════════════════════════════════════════════════════════════════════════════════════╗",
+	        "\t\t║    _________.__    .__  __    __                         _________                  ║",
+	        "\t\t║   /   _____/|  |__ |__|/  |__/  |_  ___________          \\_   ___ \\_____  ______    ║",
+	        "\t\t║   \\_____  \\ |  |  \\|  \\   __\\   __\\/ __ \\_  __ \\  ______ /    \\  \\/\\__  \\ \\____ \\   ║",
+	        "\t\t║   /        \\|   Y  \\  ||  |  |  | \\  ___/|  | \\/ /_____/ \\     \\____/ __ \\|  |_> >  ║",
+	        "\t\t║  /_______  /|___|  /__||__|  |__|  \\___  >__|             \\______  (____  /   __/   ║",
+	        "\t\t║          \\/      \\/                    \\/                        \\/     \\/|__|      ║",
+	        "\t\t║                                                                                     ║",
+	        "\t\t║                       The Worse BetterCap                                           ║",
+	        "\t\t║                                Created By Zevuxo                                    ║",
+	        "\t\t╚═════════════════════════════════════════════════════════════════════════════════════╝"
 	    };
 
 	    int line_num = sizeof(lines) / sizeof(lines[0]);
@@ -334,8 +334,21 @@ void compare_choice(char* str) {
 	else if (strcmp(str, "sniff") == 0) {
 		if (ip == NULL || router_ip == NULL) {
 			printf("[-] Enter Target Details First\n");
+			return;
 		}
-		printf("Make This Nigga\n");
+		pid_t sniff_pID = fork();
+		if(sniff_pID == 0) {
+			sniffer_entry();
+
+			exit(0);
+		} else if(sniff_pID < 0) {
+			printf("[!] Failed Starting Sniffer\n");
+		}  else {
+			printf("[*] Started Sniffer\n");
+
+			sniifer_pid = sniff_pID;
+			return;
+		}
 	}
  
  	// Below Functions Are obvious
@@ -381,6 +394,16 @@ void compare_choice(char* str) {
 }
 
 
+void print_input() {
+	if (spoofer_pid > 0) {
+		printf("%s╔%s%s═%s%s═%s%s═%s%s[%sroot@Shitter-Cap%s]%s [%s%s▶%s Spoofer Running]\n", foor, RESET, three, RESET, two, RESET, one, RESET, one, RESET, one, RESET, BOLD, TEXT_GREEN, RESET);
+		printf("%s╚%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═⟹%s ", five, RESET, six, RESET, six, RESET, eigth, RESET, nine, RESET, ten, RESET, eleven, RESET, twelve, RESET, thirteen, RESET );
+	} else {
+		printf("%s╔%s%s═%s%s═%s%s═%s%s%s[%sroot%s%s@%sShitter-Cap%s%s]%s\n", foor, RESET, three, RESET, two, RESET, one, RESET, BOLD, foor, RESET, BOLD, foor, RESET, BOLD, foor, RESET);
+		printf("%s╚%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═⟹%s ", five, RESET, six, RESET, six, RESET, eigth, RESET, nine, RESET, ten, RESET, eleven, RESET, twelve, RESET, thirteen, RESET );
+	}
+}
+
 int main(void)
 {
 	system("clear");
@@ -388,13 +411,7 @@ int main(void)
 	print_banner(1);
 	print_banner(2);
 	while(1) {
-		if (spoofer_pid > 0) {
-			printf("%s╔%s%s═%s%s═%s%s═%s%s[%sroot@Shitter-Cap%s]%s [%s%s▶%s Spoofer Running]\n", foor, RESET, three, RESET, two, RESET, one, RESET, one, RESET, one, RESET, BOLD, TEXT_GREEN, RESET);
-			printf("%s╚%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═⟹%s ", five, RESET, six, RESET, six, RESET, eigth, RESET, nine, RESET, ten, RESET, eleven, RESET, twelve, RESET, thirteen, RESET );
-		} else {
-			printf("%s╔%s%s═%s%s═%s%s═%s%s%s[%sroot%s%s@%sShitter-Cap%s%s]%s\n", foor, RESET, three, RESET, two, RESET, one, RESET, BOLD, foor, RESET, BOLD, foor, RESET, BOLD, foor, RESET);
-			printf("%s╚%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═%s%s═⟹%s ", five, RESET, six, RESET, six, RESET, eigth, RESET, nine, RESET, ten, RESET, eleven, RESET, twelve, RESET, thirteen, RESET );
-		}
+		print_input();
 		
 		fgets(choice, sizeof(choice), stdin);
 		choice[strcspn(choice, "\n")] = '\0';
