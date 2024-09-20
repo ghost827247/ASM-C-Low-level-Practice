@@ -51,7 +51,7 @@ Layer 6
 	|                     TARGET-HW-ADDR  ______________________________________________|
 	|                                    |                 TARGET-PROTO-ADDR            |
 	+-----------------------------------------------------------------------------------+
-	 *-PROTO-ADDR are 32 bits but couldnt be fucked fixing it
+	 *-PROTO-ADDR are 32 bits but cant be fucked fixing it
 
 */
 
