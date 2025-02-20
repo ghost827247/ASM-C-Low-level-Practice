@@ -3,7 +3,6 @@
 
 #define IMAGE_OPT_HEADER_MAGIC_PE32 0x10b
 #define IMAGE_OPT_HEADER_MAGIC_PE64 0x20b
-#define RVA2VA(TYPE, BASE, RVA) (TYPE)((ULONG_PTR)BASE + RVA)
 
 void print_os(WORD Major, WORD minor) {
 	switch (Major)
@@ -235,7 +234,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	printf("\n+=================== DLL IMPORTS ====================+\n");
-	importDescriptor = RVA2VA(PIMAGE_IMPORT_DESCRIPTOR, Buffer, ImportDirectoryRVA - importSection->VirtualAddress + importSection->PointerToRawData);
+	importDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)((ULONG_PTR)Buffer + (ImportDirectoryRVA - importSection->VirtualAddress + importSection->PointerToRawData));
+
 	BYTE* RawOffset = (BYTE*)Buffer + importSection->PointerToRawData;
 
 	while (importDescriptor->Name) {
@@ -243,7 +243,7 @@ int main(int argc, char *argv[]) {
 
 		thunk = importDescriptor->OriginalFirstThunk;
 
-		thunkData = RVA2VA(PIMAGE_THUNK_DATA, RawOffset, (thunk - importSection->VirtualAddress));
+		thunkData = (PIMAGE_THUNK_DATA)((ULONG_PTR)RawOffset + (thunk - importSection->VirtualAddress));
 
 		while (thunkData->u1.AddressOfData != 0) {
 			if (thunkData->u1.AddressOfData < 0x80000000) {
