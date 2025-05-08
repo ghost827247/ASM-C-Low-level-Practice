@@ -1,4 +1,3 @@
-// standard librarys
 #include <stdio.h>
 #include <string.h>    
 #include <stdlib.h>
@@ -7,8 +6,6 @@
 #include <ctype.h>
 #include <unistd.h>
 
-
-// network librarys
 #include <sys/socket.h>  
 #include <arpa/inet.h>   
 #include <netinet/ip.h>   
@@ -17,14 +14,13 @@
 #include <net/if.h>
 #include <netdb.h>
 
-// system librarys
 #include <signal.h>
 #include <unistd.h> 
 
 
 
-#define BASE_PING_SIZE 5 // todo: change to dynamic 
-#define JUNK_SIZE 56           // payload size of the icmp packet  todo: allow the user to specify the payload size
+#define BASE_PING_SIZE 5
+#define JUNK_SIZE 56         
 #define DEFAULT_TTL  64
 #define VERSION_IPV4 4
 #define PROTOCOL_ICMP 1
@@ -33,17 +29,17 @@
 															 
 
               
-typedef struct pingStats {
+struct pingStats {
 	double *times; // stores ping times
 	int seq_id;                // stores the icmp sequance ID
 	int sent;                  // stores the amount of packets sent
 	int recevied;
-} pingStats;
+};
 
-typedef struct Args {
+struct Args {
 	int max_pings;
 	int speed;
-} Args;
+};
 
 struct pingStats global_stats;
 
@@ -78,10 +74,6 @@ int compare(const void *a, const void *b) {
 }
 
 double calculate_median(struct pingStats *stats) {
-	// sort array smallest to largest
-	// if the total amount of elemants is even, find the average of the 2 middle ones and return it
-	// if the total amount is odd then return the middle elemant
-	
 	qsort(stats->times, stats->seq_id, sizeof(double), compare);
 	double median;
 
@@ -154,13 +146,9 @@ void parse_packet(unsigned char* recv_packet, double time, int size, char* targe
 	struct iphdr *iphdr = (struct iphdr*)recv_packet;
 	struct icmphdr *icmphdr = (struct icmphdr*)(recv_packet + sizeof(struct iphdr));
 
-	//quick check to see the recevied packet is the reply to our echo request
 	if(icmphdr->type != ICMP_ECHO_REPLY) {
 		return;
 	}
-
-
-
 	printf("Received %d-Bytes from %s: icmp_seq=%d ttl=%d time=%.3fms\n", size, target, ntohs(icmphdr->un.echo.sequence), iphdr->ttl, time);
 }
 
